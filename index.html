@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carta Digital - Sushi Ange</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      color: #111;
+    }
+    header {
+      background: #111;
+      color: white;
+      padding: 22px 16px;
+      text-align: center;
+    }
+    header h1 { margin: 0; font-size: 28px; }
+    header p { margin: 6px 0 0; color: #ddd; }
+    main {
+      max-width: 900px;
+      margin: auto;
+      padding: 16px;
+      padding-bottom: 140px;
+    }
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 3px 12px rgba(0,0,0,.08);
+    }
+    .promo-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+    .promo-title h2 { margin: 0; font-size: 20px; }
+    .price { font-weight: 700; color: #d80000; }
+    .included {
+      margin: 8px 0 12px;
+      padding-left: 18px;
+      color: #333;
+      line-height: 1.5;
+    }
+    label {
+      display: block;
+      font-weight: 700;
+      margin-top: 12px;
+      margin-bottom: 6px;
+    }
+    select, input, textarea {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 15px;
+      background: white;
+    }
+    .small { font-size: 13px; color: #666; margin-top: 5px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 15px;
+    }
+    .add-btn {
+      width: 100%;
+      background: #d80000;
+      color: white;
+      margin-top: 14px;
+    }
+    .cart-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: white;
+      box-shadow: 0 -3px 16px rgba(0,0,0,.16);
+      padding: 12px 16px;
+      z-index: 10;
+    }
+    .cart-content {
+      max-width: 900px;
+      margin: auto;
+      display: grid;
+      gap: 10px;
+    }
+    .send-btn {
+      width: 100%;
+      background: #25D366;
+      color: white;
+    }
+    .cart-list {
+      max-height: 160px;
+      overflow-y: auto;
+      font-size: 14px;
+      color: #222;
+    }
+    .cart-item {
+      border-bottom: 1px solid #eee;
+      padding: 7px 0;
+    }
+    .cart-item button {
+      background: #eee;
+      padding: 5px 8px;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+    .total {
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+    }
+    @media (max-width: 650px) {
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Sushi Ange</h1>
+    <p>Carta digital con pedido por WhatsApp</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Datos del pedido</h2>
+      <label>Nombre</label>
+      <input id="cliente" placeholder="Ej: Danna" />
+      <label>Dirección o retiro</label>
+      <input id="direccion" placeholder="Ej: Retiro / Dirección de entrega" />
+      <label>Método de pago</label>
+      <select id="pago">
+        <option value="Efectivo">Efectivo</option>
+        <option value="Transferencia">Transferencia</option>
+      </select>
+    </section>
+
+    <div id="menu"></div>
+  </main>
+
+  <div class="cart-bar">
+    <div class="cart-content">
+      <div class="cart-list" id="cartList">Aún no has agregado productos.</div>
+      <div class="total"><span>Total</span><span id="total">$0</span></div>
+      <button class="send-btn" onclick="enviarWhatsApp()">Enviar pedido por WhatsApp</button>
+    </div>
+  </div>
+
+  <script>
+    const WHATSAPP = "56979557665"; // Cambiar por tu número. Ejemplo: 56912345678
+
+    const vegetales = ["Palta", "Pimentón", "Choclo", "Choclito", "Champiñón", "Cebollín", "Palmito", "Zanahoria", "Ciboulette"];
+    const proteinas = ["Pollo", "Camarón", "Kanikama", "Salmón (+$1.300)"];
+    const quesos = ["Queso Philadelphia", "Queso Gauda", "Sin queso, reemplazar por vegetal"];
+
+    const promos = [
+      { id: "A", nombre: "Promo A", precio: 10000, tipo: "burger", incluido: ["2 sushi burgers"], piezas: "2 sushi burgers" },
+      { id: "B", nombre: "Promo B", precio: 9000, tipo: "rolls", incluido: ["10 envueltos en nori", "10 envueltos en sésamo", "10 envueltos en ciboulette"], piezas: "30 piezas" },
+      { id: "C", nombre: "Promo C", precio: 10000, tipo: "rolls", incluido: ["10 envueltos en tempura", "10 envueltos en palta", "10 envueltos en nori"], piezas: "30 piezas" },
+      { id: "D", nombre: "Promo D", precio: 10500, tipo: "rolls", incluido: ["10 envueltos en tempura", "10 envueltos en palta", "10 envueltos en queso"], piezas: "30 piezas" },
+      { id: "E", nombre: "Promo E", precio: 15000, tipo: "rolls", incluido: ["20 envueltos en sésamo", "20 envueltos en ciboulette", "10 envueltos en nori"], piezas: "50 piezas" },
+      { id: "F", nombre: "Promo F", precio: 16500, tipo: "rolls", incluido: ["10 envueltos en tempura", "10 envueltos en queso", "10 envueltos en palta", "10 envueltos en nori", "10 envueltos en ciboulette"], piezas: "50 piezas" },
+      { id: "G", nombre: "Promo G", precio: 17500, tipo: "rolls", incluido: ["20 envueltos en tempura", "20 envueltos en palta", "10 envueltos en queso"], piezas: "50 piezas" }
+    ];
+
+    let carrito = [];
+
+    function formatCLP(valor) {
+      return "$" + valor.toLocaleString("es-CL");
+    }
+
+    function optionList(arr) {
+      return arr.map(x => `<option value="${x}">${x}</option>`).join("");
+    }
+
+    function renderMenu() {
+      const cont = document.getElementById("menu");
+      cont.innerHTML = promos.map(promo => `
+        <section class="card">
+          <div class="promo-title">
+            <h2>${promo.nombre}</h2>
+            <span class="price">${formatCLP(promo.precio)}</span>
+          </div>
+          <strong>${promo.piezas}</strong>
+          <ul class="included">
+            ${promo.incluido.map(i => `<li>${i}</li>`).join("")}
+          </ul>
+
+          <div class="row">
+            <div>
+              <label>Proteína</label>
+              <select id="proteina-${promo.id}">${optionList(proteinas)}</select>
+            </div>
+            <div>
+              <label>Queso</label>
+              <select id="queso-${promo.id}" onchange="toggleVegetalExtra('${promo.id}')">${optionList(quesos)}</select>
+            </div>
+          </div>
+
+          <label>Vegetal 1</label>
+          <select id="veg1-${promo.id}">${optionList(vegetales)}</select>
+
+          <label>Vegetal 2 / reemplazo si no lleva queso</label>
+          <select id="veg2-${promo.id}">
+            <option value="No aplica">No aplica</option>
+            ${optionList(vegetales)}
+          </select>
+          <div class="small">Si el cliente no quiere queso, puede elegir otro vegetal.</div>
+
+          <label>Observaciones</label>
+          <textarea id="obs-${promo.id}" rows="2" placeholder="Ej: sin soya, sin teriyaki, cortar pequeño..."></textarea>
+
+          <button class="add-btn" onclick="agregarPromo('${promo.id}')">Agregar ${promo.nombre}</button>
+        </section>
+      `).join("");
+    }
+
+    function toggleVegetalExtra(id) {
+      const queso = document.getElementById(`queso-${id}`).value;
+      const veg2 = document.getElementById(`veg2-${id}`);
+      if (queso.includes("Sin queso")) {
+        veg2.value = vegetales[0];
+      }
+    }
+
+    function agregarPromo(id) {
+      const promo = promos.find(p => p.id === id);
+      const proteina = document.getElementById(`proteina-${id}`).value;
+      const queso = document.getElementById(`queso-${id}`).value;
+      const veg1 = document.getElementById(`veg1-${id}`).value;
+      const veg2 = document.getElementById(`veg2-${id}`).value;
+      const obs = document.getElementById(`obs-${id}`).value.trim();
+      const extraSalmon = proteina.includes("Salmón") ? 1300 : 0;
+
+      carrito.push({
+        ...promo,
+        proteina,
+        queso,
+        veg1,
+        veg2,
+        obs,
+        precioFinal: promo.precio + extraSalmon
+      });
+
+      renderCarrito();
+    }
+
+    function eliminarItem(index) {
+      carrito.splice(index, 1);
+      renderCarrito();
+    }
+
+    function renderCarrito() {
+      const cart = document.getElementById("cartList");
+      const total = carrito.reduce((acc, item) => acc + item.precioFinal, 0);
+      document.getElementById("total").textContent = formatCLP(total);
+
+      if (carrito.length === 0) {
+        cart.innerHTML = "Aún no has agregado productos.";
+        return;
+      }
+
+      cart.innerHTML = carrito.map((item, index) => `
+        <div class="cart-item">
+          <strong>${item.nombre}</strong> - ${formatCLP(item.precioFinal)}<br>
+          Proteína: ${item.proteina} | Queso: ${item.queso}<br>
+          Vegetal 1: ${item.veg1} | Vegetal 2: ${item.veg2}<br>
+          ${item.obs ? `Obs: ${item.obs}<br>` : ""}
+          <button onclick="eliminarItem(${index})">Eliminar</button>
+        </div>
+      `).join("");
+    }
+
+    function enviarWhatsApp() {
+      if (carrito.length === 0) {
+        alert("Agrega al menos un producto al pedido.");
+        return;
+      }
+
+      const cliente = document.getElementById("cliente").value || "No indicado";
+      const direccion = document.getElementById("direccion").value || "No indicado";
+      const pago = document.getElementById("pago").value;
+      const total = carrito.reduce((acc, item) => acc + item.precioFinal, 0);
+
+      let mensaje = `Hola, quiero hacer un pedido:%0A%0A`;
+      carrito.forEach((item, i) => {
+        mensaje += `*${i + 1}. ${item.nombre}* - ${formatCLP(item.precioFinal)}%0A`;
+        mensaje += `${item.piezas}%0A`;
+        mensaje += `Envolturas: ${item.incluido.join(", ")}%0A`;
+        mensaje += `Proteína: ${item.proteina}%0A`;
+        mensaje += `Queso: ${item.queso}%0A`;
+        mensaje += `Vegetal 1: ${item.veg1}%0A`;
+        mensaje += `Vegetal 2: ${item.veg2}%0A`;
+        if (item.obs) mensaje += `Obs: ${item.obs}%0A`;
+        mensaje += `%0A`;
+      });
+
+      mensaje += `*Total: ${formatCLP(total)}*%0A%0A`;
+      mensaje += `Nombre: ${cliente}%0A`;
+      mensaje += `Dirección/retiro: ${direccion}%0A`;
+      mensaje += `Pago: ${pago}`;
+
+      window.open(`https://wa.me/${WHATSAPP}?text=${mensaje}`, "_blank");
+    }
+
+    renderMenu();
+  </script>
+</body>
+</html>
